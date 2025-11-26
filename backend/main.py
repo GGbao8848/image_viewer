@@ -24,8 +24,8 @@ class ShortcutConfig(BaseModel):
     clear: str = "c"
     # Map key -> class name
     classes: Dict[str, str] = {
-        "1": "1",
-        "2": "2"
+        "1": "zhengbao",
+        "2": "wubao"
     }
     # Map class name -> hex color
     class_colors: Dict[str, str] = {
