@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightweight Image Viewer</title>
+    <style>
+        :root {
+            --grid-size: 150px;
+            --brightness: 100%;
+
+            /* Default (nomacs) */
+            --bg-color: #222;
+            --text-color: #eee;
+            --bar-bg-color: #333;
+            --input-bg-color: #444;
+            --input-border-color: #555;
+            --input-text-color: #fff;
+            --button-bg-color: #007bff;
+            --button-hover-color: #0056b3;
+            --button-text-color: white;
+            --modal-bg-color: #333;
+            --thumbnail-bg-color: #1a1a1a;
+            --border-color: #555;
+        }
+
+        /* Douyin (TikTok) - Dark/Black/Neon */
+        body.theme-douyin {
+            --bg-color: #161823;
+            --text-color: #ffffff;
+            --bar-bg-color: #161823;
+            --input-bg-color: #2F3035;
+            --input-border-color: #444;
+            --input-text-color: #fff;
+            --button-bg-color: #FE2C55;
+            --button-hover-color: #E0274B;
+            --button-text-color: white;
+            --modal-bg-color: #161823;
+            --thumbnail-bg-color: #000;
+            --border-color: #333;
+        }
+
+        /* Bilibili - White/Pink */
+        body.theme-bilibili {
+            --bg-color: #ffffff;
+            --text-color: #212121;
+            --bar-bg-color: #ffffff;
+            --input-bg-color: #f4f4f4;
+            --input-border-color: #e7e7e7;
+            --input-text-color: #333;
+            --button-bg-color: #FB7299;
+            --button-hover-color: #E4668A;
+            --button-text-color: white;
+            --modal-bg-color: #ffffff;
+            --thumbnail-bg-color: #f9f9f9;
+            --border-color: #e7e7e7;
+        }
+
+        /* YouTube - Dark/Red */
+        body.theme-youtube {
+            --bg-color: #0f0f0f;
+            --text-color: #f1f1f1;
+            --bar-bg-color: #0f0f0f;
+            --input-bg-color: #121212;
+            --input-border-color: #303030;
+            --input-text-color: #fff;
+            --button-bg-color: #cc0000;
+            --button-hover-color: #990000;
+            --button-text-color: white;
+            --modal-bg-color: #282828;
+            --thumbnail-bg-color: #000;
+            --border-color: #303030;
+        }
+
+        /* WeChat - Light/Green */
+        body.theme-wechat {
+            --bg-color: #EDEDED;
+            --text-color: #000000;
+            --bar-bg-color: #EDEDED;
+            --input-bg-color: #FFFFFF;
+            --input-border-color: #DCDCDC;
+            --input-text-color: #000;
+            --button-bg-color: #07C160;
+            --button-hover-color: #06AD56;
+            --button-text-color: white;
+            --modal-bg-color: #FFFFFF;
+            --thumbnail-bg-color: #fff;
+            --border-color: #DCDCDC;
+        }
+
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #top-bar {
+            padding: 10px;
+            background-color: var(--bar-bg-color);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #path-input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid var(--input-border-color);
+            background-color: var(--input-bg-color);
+            color: var(--input-text-color);
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: var(--button-bg-color);
+            color: var(--button-text-color);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: var(--button-hover-color);
+        }
+
+        #grid-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        #grid-size-slider {
+            width: 120px;
+        }
+
+        #settings-btn {
+            background-color: var(--input-border-color);
+            color: var(--text-color);
+        }
+
+        #main-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        /* Grid View */
+        #grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--grid-size), 1fr));
+            gap: 10px;
+        }
+
+        .thumbnail-container {
+            position: relative;
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: auto;
+            max-height: calc(var(--grid-size) * 1.5);
+            object-fit: contain;
+            cursor: pointer;
+            border: 3px solid transparent;
+            border-radius: 4px;
+            transition: border-color 0.2s, transform 0.2s, filter 0.2s;
+            display: block;
+            background-color: var(--thumbnail-bg-color);
+            filter: brightness(var(--brightness));
+        }
+
+        .thumbnail:hover {
+            border-color: #007bff;
+        }
+
+        .thumbnail.selected {
+            border-color: #ffc107;
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.7);
+            transform: scale(1.05);
+            z-index: 10;
+            position: relative;
+        }
+
+        .class-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background-color: rgba(0, 123, 255, 0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        /* Color-coded badges for different classes */
+        .class-badge-1 {
+            background-color: rgba(40, 167, 69, 0.9);
+            /* Green */
+        }
+
+        .class-badge-2 {
+            background-color: rgba(220, 53, 69, 0.9);
+            /* Red */
+        }
+
+        .class-badge-3 {
+            background-color: rgba(0, 123, 255, 0.9);
+            /* Blue */
+        }
+
+        .class-badge-4 {
+            background-color: rgba(253, 126, 20, 0.9);
+            /* Orange */
+        }
+
+        .class-badge-5 {
+            background-color: rgba(111, 66, 193, 0.9);
+            /* Purple */
+        }
+
+        /* Single View Overlay */
+        #single-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #single-image {
+            max-width: 95%;
+            max-height: 90%;
+            object-fit: contain;
+            filter: brightness(var(--brightness));
+            transition: filter 0.2s;
+        }
+
+        #close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            padding: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #prev-btn {
+            left: 20px;
+        }
+
+        #next-btn {
+            right: 20px;
+        }
+
+        #image-info {
+            position: absolute;
+            bottom: 20px;
+            color: #aaa;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* Settings Modal */
+        #settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #settings-content {
+            background-color: var(--modal-bg-color);
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+            color: var(--text-color);
+        }
+
+        .setting-row {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-row label {
+            flex-grow: 1;
+        }
+
+        .setting-row input {
+            padding: 5px;
+            background-color: var(--input-bg-color);
+            border: 1px solid var(--input-border-color);
+            color: var(--input-text-color);
+            border-radius: 4px;
+            width: 100px;
+        }
+
+        #class-list {
+            margin-top: 10px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+        }
+
+        .class-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="top-bar">
+        <input type="text" id="path-input" placeholder="Enter directory path...">
+        <button id="load-btn">Load</button>
+        <div id="grid-controls">
+            <label>Size:</label>
+            <input type="range" id="grid-size-slider" min="80" max="1000" value="150">
+            <span id="grid-size-value">150px</span>
+        </div>
+        <div id="brightness-controls" style="display: flex; gap: 5px; align-items: center; margin-left: 10px;">
+            <label>Brightness:</label>
+            <input type="range" id="brightness-slider" min="0" max="200" value="100" style="width: 100px;">
+            <span id="brightness-value">100%</span>
+            <button id="reset-brightness-btn" style="padding: 4px 8px; font-size: 12px;">Reset</button>
+        </div>
+        <button id="settings-btn">Settings</button>
+    </div>
+
+    <div id="main-container">
+        <div id="grid-view"></div>
+    </div>
+
+    <div id="single-view">
+        <button id="close-btn">&times;</button>
+        <button id="prev-btn" class="nav-btn">&lt;</button>
+        <img id="single-image" src="" alt="View">
+        <button id="next-btn" class="nav-btn">&gt;</button>
+        <div id="image-info"></div>
+    </div>
+
+    <div id="settings-modal">
+        <div id="settings-content">
+            <h2>Settings</h2>
+            <div class="setting-row">
+                <label>Theme:</label>
+                <select id="theme-select"
+                    style="padding: 5px; background-color: var(--input-bg-color); border: 1px solid var(--input-border-color); color: var(--input-text-color); border-radius: 4px; width: 100px;">
+                    <option value="nomacs">Nomacs</option>
+                    <option value="douyin">Douyin</option>
+                    <option value="bilibili">Bilibili</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="wechat">WeChat</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <label>Next Image:</label>
+                <input type="text" id="key-next">
+            </div>
+            <div class="setting-row">
+                <label>Prev Image:</label>
+                <input type="text" id="key-prev">
+            </div>
+            <div class="setting-row">
+                <label>Clear Class:</label>
+                <input type="text" id="key-clear">
+            </div>
+
+            <h3>Classifications</h3>
+            <div id="class-list"></div>
+            <button id="add-class-btn" style="margin-top: 10px;">+ Add Class</button>
+
+            <div style="margin-top: 20px; text-align: right;">
+                <button id="save-settings-btn">Save</button>
+                <button id="cancel-settings-btn" style="background-color: #555;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pathInput = document.getElementById('path-input');
+        const loadBtn = document.getElementById('load-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const gridView = document.getElementById('grid-view');
+        const singleView = document.getElementById('single-view');
+        const singleImage = document.getElementById('single-image');
+        const closeBtn = document.getElementById('close-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const imageInfo = document.getElementById('image-info');
+        const settingsModal = document.getElementById('settings-modal');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const cancelSettingsBtn = document.getElementById('cancel-settings-btn');
+        const addClassBtn = document.getElementById('add-class-btn');
+        const classList = document.getElementById('class-list');
+        const gridSizeSlider = document.getElementById('grid-size-slider');
+        const gridSizeValue = document.getElementById('grid-size-value');
+        const themeSelect = document.getElementById('theme-select');
+        const brightnessSlider = document.getElementById('brightness-slider');
+        const brightnessValue = document.getElementById('brightness-value');
+        const resetBrightnessBtn = document.getElementById('reset-brightness-btn');
+
+        let currentImages = [];
+        let currentPath = '';
+        let currentIndex = -1;
+        let selectedGridIndex = -1; // Track selected image in grid mode
+        let config = {
+            shortcuts: {
+                next: 'ArrowDown',
+                prev: 'ArrowUp',
+                clear: 'c',
+                classes: { '1': '1', '2': '2' }
+            }
+        };
+        let classifications = {}; // filename -> class_name
+
+        // Load path from URL hash or default
+        window.addEventListener('load', async () => {
+            pathInput.focus();
+            await loadConfig();
+            // Initialize grid size from localStorage or default
+            const savedSize = localStorage.getItem('gridSize') || '150';
+            gridSizeSlider.value = savedSize;
+            updateGridSize(savedSize);
+
+            // Initialize theme
+            const savedTheme = localStorage.getItem('theme') || 'nomacs';
+            applyTheme(savedTheme);
+        });
+
+        function applyTheme(theme) {
+            document.body.className = ''; // Clear existing themes
+            if (theme !== 'nomacs') {
+                document.body.classList.add(`theme-${theme}`);
+            }
+            // Update select if it exists (might be called from outside settings)
+            if (themeSelect) themeSelect.value = theme;
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                if (res.ok) {
+                    config = await res.json();
+                }
+            } catch (e) {
+                console.error("Failed to load config", e);
+            }
+        }
+
+        async function loadImages() {
+            const path = pathInput.value.trim();
+            if (!path) return;
+
+            try {
+                const response = await fetch(`/api/images?path=${encodeURIComponent(path)}`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    alert(err.detail || 'Failed to load images');
+                    return;
+                }
+                const data = await response.json();
+                currentImages = data.images;
+                currentPath = data.path;
+                // Load historical classifications from backend
+                classifications = data.classifications || {};
+                renderGrid();
+            } catch (error) {
+                console.error('Error loading images:', error);
+                alert('Error loading images');
+            }
+        }
+
+        function renderGrid() {
+            gridView.innerHTML = '';
+            selectedGridIndex = -1; // Reset selection when re-rendering
+            currentImages.forEach((filename, index) => {
+                const container = document.createElement('div');
+                container.className = 'thumbnail-container';
+
+                const img = document.createElement('img');
+                // Use the /api/image endpoint
+                img.src = `/api/image?path=${encodeURIComponent(currentPath + '/' + filename)}`;
+                img.className = 'thumbnail';
+                img.loading = 'lazy'; // Lazy load for performance
+
+                // Single click: select image
+                img.onclick = (e) => {
+                    e.stopPropagation();
+                    selectGridImage(index);
+                };
+
+                // Double click: open single view
+                img.ondblclick = (e) => {
+                    e.stopPropagation();
+                    openSingleView(index);
+                };
+
+                container.appendChild(img);
+
+                if (classifications[filename]) {
+                    const badge = document.createElement('span');
+                    const className = classifications[filename];
+                    badge.className = 'class-badge';
+                    badge.textContent = className;
+
+                    // Apply dynamic color
+                    const color = config.shortcuts.class_colors ? (config.shortcuts.class_colors[className] || '#007bff') : '#007bff';
+                    badge.style.backgroundColor = color;
+
+                    container.appendChild(badge);
+                }
+
+                gridView.appendChild(container);
+            });
+        }
+
+        function selectGridImage(index) {
+            if (index < 0 || index >= currentImages.length) return;
+            selectedGridIndex = index;
+            // Update visual selection
+            const thumbnails = gridView.querySelectorAll('.thumbnail');
+            thumbnails.forEach((thumb, i) => {
+                if (i === index) {
+                    thumb.classList.add('selected');
+                } else {
+                    thumb.classList.remove('selected');
+                }
+            });
+            // Scroll selected thumbnail into view, centered vertically
+            const selectedThumb = thumbnails[index];
+            if (selectedThumb) {
+                selectedThumb.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+            }
+        }
+
+        function updateGridSize(size) {
+            document.documentElement.style.setProperty('--grid-size', size + 'px');
+            gridSizeValue.textContent = size + 'px';
+            localStorage.setItem('gridSize', size);
+        }
+
+        function openSingleView(index) {
+            if (index < 0 || index >= currentImages.length) return;
+            currentIndex = index;
+            updateSingleView();
+            singleView.style.display = 'flex';
+            singleImage.focus(); // for keyboard events if attached to image
+        }
+
+        function updateSingleView() {
+            const filename = currentImages[currentIndex];
+            singleImage.src = `/api/image?path=${encodeURIComponent(currentPath + '/' + filename)}`;
+
+            let info = `${currentIndex + 1} / ${currentImages.length} - ${filename}`;
+            if (classifications[filename]) {
+                info += ` [${classifications[filename]}]`;
+            }
+            imageInfo.textContent = info;
+        }
+
+        function closeSingleView() {
+            singleView.style.display = 'none';
+            currentIndex = -1;
+            renderGrid(); // Re-render to show badges
+        }
+
+        function showNext() {
+            if (currentIndex < currentImages.length - 1) {
+                currentIndex++;
+                updateSingleView();
+            }
+        }
+
+        function showPrev() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateSingleView();
+            }
+        }
+
+        async function classifyImage(key) {
+            if (currentIndex === -1) return;
+
+            const className = config.shortcuts.classes[key];
+            if (!className) return;
+
+            const filename = currentImages[currentIndex];
+            const fullPath = currentPath + '/' + filename;
+
+            try {
+                const res = await fetch('/api/classify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_path: fullPath, class_name: className })
+                });
+
+                if (res.ok) {
+                    classifications[filename] = className;
+                    updateSingleView();
+                    // Auto advance
+                    showNext();
+                } else {
+                    console.error("Classification failed");
+                }
+            } catch (e) {
+                console.error("Error classifying", e);
+            }
+        }
+
+        async function unclassifyImage() {
+            if (currentIndex === -1) return;
+            const filename = currentImages[currentIndex];
+            const className = classifications[filename];
+            if (!className) return; // Not classified
+
+            const fullPath = currentPath + '/' + filename;
+
+            try {
+                const res = await fetch('/api/unclassify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_path: fullPath, class_name: className })
+                });
+
+                if (res.ok) {
+                    delete classifications[filename];
+                    updateSingleView();
+                }
+            } catch (e) {
+                console.error("Error unclassifying", e);
+            }
+        }
+
+        // Settings UI Logic
+        function openSettings() {
+            // Reset theme select to current saved theme
+            const savedTheme = localStorage.getItem('theme') || 'nomacs';
+            if (themeSelect) themeSelect.value = savedTheme;
+
+            document.getElementById('key-next').value = config.shortcuts.next;
+            document.getElementById('key-prev').value = config.shortcuts.prev;
+            document.getElementById('key-clear').value = config.shortcuts.clear;
+
+            classList.innerHTML = '';
+            Object.entries(config.shortcuts.classes).forEach(([key, name]) => {
+                const color = config.shortcuts.class_colors ? (config.shortcuts.class_colors[name] || '#007bff') : '#007bff';
+                addClassRow(key, name, color);
+            });
+
+            settingsModal.style.display = 'flex';
+        }
+
+        function addClassRow(key = '', name = '', color = '#007bff') {
+            const div = document.createElement('div');
+            div.className = 'class-item';
+            div.innerHTML = `
+                <input type="text" placeholder="Key" value="${key}" class="class-key" style="width: 50px;">
+                <input type="text" placeholder="Folder Name" value="${name}" class="class-name" style="flex-grow: 1;">
+                <input type="color" value="${color}" class="class-color" style="width: 50px; height: 30px; padding: 0; border: none; background: none;">
+                <button onclick="this.parentElement.remove()" style="background-color: #d9534f;">X</button>
+            `;
+            classList.appendChild(div);
+        }
+
+        async function saveSettings() {
+            // Save theme
+            if (themeSelect) {
+                const newTheme = themeSelect.value;
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            }
+
+            const newConfig = {
+                shortcuts: {
+                    next: document.getElementById('key-next').value,
+                    prev: document.getElementById('key-prev').value,
+                    clear: document.getElementById('key-clear').value,
+                    classes: {},
+                    class_colors: {}
+                }
+            };
+
+            document.querySelectorAll('.class-item').forEach(item => {
+                const key = item.querySelector('.class-key').value;
+                const name = item.querySelector('.class-name').value;
+                const color = item.querySelector('.class-color').value;
+                if (key && name) {
+                    newConfig.shortcuts.classes[key] = name;
+                    newConfig.shortcuts.class_colors[name] = color;
+                }
+            });
+
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newConfig)
+                });
+                if (res.ok) {
+                    config = await res.json();
+                    settingsModal.style.display = 'none';
+                }
+            } catch (e) {
+                alert("Failed to save settings");
+            }
+        }
+
+        // Event Listeners
+        loadBtn.addEventListener('click', loadImages);
+        settingsBtn.addEventListener('click', openSettings);
+        saveSettingsBtn.addEventListener('click', saveSettings);
+        cancelSettingsBtn.addEventListener('click', () => settingsModal.style.display = 'none');
+        addClassBtn.addEventListener('click', () => addClassRow());
+
+        pathInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loadImages();
+        });
+
+        pathInput.addEventListener('paste', (e) => {
+            setTimeout(loadImages, 100);
+        });
+
+        closeBtn.addEventListener('click', closeSingleView);
+        nextBtn.addEventListener('click', showNext);
+        prevBtn.addEventListener('click', showPrev);
+
+        // Grid size slider
+        gridSizeSlider.addEventListener('input', (e) => {
+            updateGridSize(e.target.value);
+        });
+
+        // Brightness controls
+        brightnessSlider.addEventListener('input', (e) => {
+            updateBrightness(e.target.value);
+        });
+
+        resetBrightnessBtn.addEventListener('click', () => {
+            updateBrightness(100);
+            brightnessSlider.value = 100;
+        });
+
+        function updateBrightness(val) {
+            document.documentElement.style.setProperty('--brightness', val + '%');
+            brightnessValue.textContent = val + '%';
+        }
+
+        // Keyboard navigation & Shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ignore if in input fields
+            if (e.target.tagName === 'INPUT') return;
+
+            if (singleView.style.display === 'flex') {
+                // Single view mode
+                if (e.key === 'Escape') closeSingleView();
+
+                // Navigation
+                if (e.key === config.shortcuts.next) showNext();
+                if (e.key === config.shortcuts.prev) showPrev();
+
+                // Classification
+                if (config.shortcuts.classes[e.key]) {
+                    classifyImage(e.key);
+                }
+
+                // Clear
+                if (e.key === config.shortcuts.clear) {
+                    unclassifyImage();
+                }
+            } else {
+                // Grid view mode
+                if (selectedGridIndex !== -1) {
+                    // Classification shortcuts in grid mode
+                    if (config.shortcuts.classes[e.key]) {
+                        classifyGridImage(e.key);
+                    }
+
+                    // Clear classification
+                    if (e.key === config.shortcuts.clear) {
+                        unclassifyGridImage();
+                    }
+
+                    // Enter or Space: open single view
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openSingleView(selectedGridIndex);
+                    }
+                }
+
+                // Arrow key navigation in grid
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+                    e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    navigateGrid(e.key);
+                }
+            }
+        });
+
+        async function classifyGridImage(key) {
+            if (selectedGridIndex === -1) return;
+
+            const className = config.shortcuts.classes[key];
+            if (!className) return;
+
+            const filename = currentImages[selectedGridIndex];
+            const fullPath = currentPath + '/' + filename;
+            const currentIdx = selectedGridIndex; // preserve before render
+            const nextIndex = Math.min(currentImages.length - 1, currentIdx + 1);
+
+            try {
+                const res = await fetch('/api/classify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_path: fullPath, class_name: className })
+                });
+
+                if (res.ok) {
+                    classifications[filename] = className;
+                    renderGrid();
+                    // Select next image if it exists, otherwise stay on current
+                    if (nextIndex !== currentIdx) {
+                        selectGridImage(nextIndex);
+                    } else {
+                        selectGridImage(currentIdx);
+                    }
+                } else {
+                    console.error("Classification failed");
+                }
+            } catch (e) {
+                console.error("Error classifying", e);
+            }
+        }
+
+        async function unclassifyGridImage() {
+            if (selectedGridIndex === -1) return;
+            const filename = currentImages[selectedGridIndex];
+            const className = classifications[filename];
+            if (!className) return;
+
+            const fullPath = currentPath + '/' + filename;
+
+            try {
+                const res = await fetch('/api/unclassify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_path: fullPath, class_name: className })
+                });
+
+                if (res.ok) {
+                    delete classifications[filename];
+                    renderGrid();
+                    selectGridImage(selectedGridIndex);
+                }
+            } catch (e) {
+                console.error("Error unclassifying", e);
+            }
+        }
+
+        function navigateGrid(key) {
+            if (currentImages.length === 0) return;
+
+            // If no selection, select first image
+            if (selectedGridIndex === -1) {
+                selectGridImage(0);
+                return;
+            }
+
+            // Calculate grid columns based on current grid size
+            const gridSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-size'));
+            const containerWidth = gridView.offsetWidth;
+            const cols = Math.floor(containerWidth / (gridSize + 10)); // 10 is gap
+
+            let newIndex = selectedGridIndex;
+
+            switch (key) {
+                case 'ArrowLeft':
+                    newIndex = Math.max(0, selectedGridIndex - 1);
+                    break;
+                case 'ArrowRight':
+                    newIndex = Math.min(currentImages.length - 1, selectedGridIndex + 1);
+                    break;
+                case 'ArrowUp':
+                    newIndex = Math.max(0, selectedGridIndex - cols);
+                    break;
+                case 'ArrowDown':
+                    newIndex = Math.min(currentImages.length - 1, selectedGridIndex + cols);
+                    break;
+            }
+
+            if (newIndex !== selectedGridIndex) {
+                selectGridImage(newIndex);
+                // Scroll to selected image if needed
+                const thumbnails = gridView.querySelectorAll('.thumbnail');
+                if (thumbnails[newIndex]) {
+                    thumbnails[newIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
