@@ -1,0 +1,48 @@
+name: Build All Platforms
+
+on:
+  push:
+    tags:
+      - 'v*' # 当推送 v1.0 这种 tag 时触发
+
+jobs:
+  build:
+    name: Build packages
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            TARGET: linux
+            CMD_BUILD: pyinstaller --onefile --name=image_viewer ./backend/main.py
+            OUT_FILE: dist/image_viewer
+          - os: macos-latest
+            TARGET: macos
+            CMD_BUILD: pyinstaller --onefile --name=image_viewer ./backend/main.py
+            OUT_FILE: dist/image_viewer
+          - os: windows-latest
+            TARGET: windows
+            CMD_BUILD: pyinstaller --onefile --name=image_viewer.exe ./backend/main.py
+            OUT_FILE: dist/image_viewer.exe
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+          
+      - name: Build with PyInstaller
+        run: ${{ matrix.CMD_BUILD }}
+        
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: image_viewer-${{ matrix.TARGET }}
+          path: ${{ matrix.OUT_FILE }}
