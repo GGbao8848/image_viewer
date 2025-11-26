@@ -366,6 +366,8 @@
             <span id="brightness-value">100%</span>
             <button id="reset-brightness-btn" style="padding: 4px 8px; font-size: 12px;">Reset</button>
         </div>
+        <button id="clear-cache-btn" style="background-color: #ff9800; padding: 4px 8px; font-size: 12px;"
+            title="Clear thumbnail cache">🗑️ Clear Cache</button>
         <button id="settings-btn">Settings</button>
     </div>
 
@@ -423,6 +425,7 @@
         const pathInput = document.getElementById('path-input');
         const loadBtn = document.getElementById('load-btn');
         const settingsBtn = document.getElementById('settings-btn');
+        const clearCacheBtn = document.getElementById('clear-cache-btn');
         const gridView = document.getElementById('grid-view');
         const singleView = document.getElementById('single-view');
         const singleImage = document.getElementById('single-image');
@@ -455,6 +458,9 @@
             }
         };
         let classifications = {}; // filename -> class_name
+
+        // Preload cache for single view images
+        const preloadCache = new Map();
 
         // Load path from URL hash or default
         window.addEventListener('load', async () => {
@@ -516,15 +522,43 @@
         function renderGrid() {
             gridView.innerHTML = '';
             selectedGridIndex = -1; // Reset selection when re-rendering
+
+            // Create intersection observer for lazy loading thumbnails
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            img.removeAttribute('data-src');
+                            observer.unobserve(img);
+                        }
+                    }
+                });
+            }, {
+                rootMargin: '200px' // Start loading 200px before entering viewport
+            });
+
             currentImages.forEach((filename, index) => {
                 const container = document.createElement('div');
                 container.className = 'thumbnail-container';
 
                 const img = document.createElement('img');
-                // Use the /api/image endpoint
-                img.src = `/api/image?path=${encodeURIComponent(currentPath + '/' + filename)}`;
+                // Use thumbnail API instead of full image for grid
+                const thumbnailUrl = `/api/thumbnail?path=${encodeURIComponent(currentPath + '/' + filename)}&size=300`;
+
+                // Implement virtual scrolling: only load images near viewport
+                img.dataset.src = thumbnailUrl;
                 img.className = 'thumbnail';
-                img.loading = 'lazy'; // Lazy load for performance
+
+                // Load first 30 images immediately, lazy load the rest
+                if (index < 30) {
+                    img.src = thumbnailUrl;
+                } else {
+                    // Placeholder: transparent 1px gif
+                    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                    observer.observe(img);
+                }
 
                 // Single click: select image
                 img.onclick = (e) => {
@@ -599,6 +633,40 @@
                 info += ` [${classifications[filename]}]`;
             }
             imageInfo.textContent = info;
+
+            // Smart preloading: load next and previous images in background
+            preloadAdjacentImages(currentIndex);
+        }
+
+        function preloadAdjacentImages(index) {
+            // Preload 2 ahead and 1 behind for smooth navigation
+            const toPreload = [];
+
+            // Next images
+            if (index + 1 < currentImages.length) toPreload.push(index + 1);
+            if (index + 2 < currentImages.length) toPreload.push(index + 2);
+
+            // Previous image
+            if (index - 1 >= 0) toPreload.push(index - 1);
+
+            toPreload.forEach(i => {
+                const filename = currentImages[i];
+                const imagePath = `${currentPath}/${filename}`;
+
+                // Skip if already preloaded
+                if (preloadCache.has(imagePath)) return;
+
+                // Create new Image object for preloading
+                const img = new Image();
+                img.src = `/api/image?path=${encodeURIComponent(imagePath)}`;
+                preloadCache.set(imagePath, img);
+
+                // Limit cache size to 10 images
+                if (preloadCache.size > 10) {
+                    const firstKey = preloadCache.keys().next().value;
+                    preloadCache.delete(firstKey);
+                }
+            });
         }
 
         function closeSingleView() {
@@ -754,6 +822,24 @@
         saveSettingsBtn.addEventListener('click', saveSettings);
         cancelSettingsBtn.addEventListener('click', () => settingsModal.style.display = 'none');
         addClassBtn.addEventListener('click', () => addClassRow());
+
+        clearCacheBtn.addEventListener('click', async () => {
+            if (!confirm('Clear all cached thumbnails? This will free up disk space but thumbnails will need to be regenerated.')) {
+                return;
+            }
+            try {
+                const res = await fetch('/api/thumbnails', { method: 'DELETE' });
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`✅ ${data.message}`);
+                } else {
+                    alert('❌ Failed to clear cache');
+                }
+            } catch (e) {
+                console.error('Error clearing cache:', e);
+                alert('❌ Error clearing cache');
+            }
+        });
 
         pathInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') loadImages();

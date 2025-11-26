@@ -7,12 +7,19 @@ from typing import List, Dict
 import mimetypes
 from pydantic import BaseModel
 import shutil
+import hashlib
+from PIL import Image
+import tempfile
 
 app = FastAPI()
 
 # Mount frontend directory to serve static files (css, js if any)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "../frontend")
+
+# Thumbnail cache directory
+THUMBNAIL_CACHE_DIR = os.path.join(tempfile.gettempdir(), "image_viewer_thumbnails")
+os.makedirs(THUMBNAIL_CACHE_DIR, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
@@ -186,6 +193,102 @@ async def get_image(path: str = Query(..., description="Full path to the image f
          raise HTTPException(status_code=400, detail="Not an image file")
 
     return FileResponse(path)
+
+def generate_cache_key(file_path: str, size: int) -> str:
+    """Generate a unique cache key based on file path, modification time, and thumbnail size."""
+    try:
+        mtime = os.path.getmtime(file_path)
+        cache_input = f"{file_path}_{mtime}_{size}"
+        return hashlib.md5(cache_input.encode()).hexdigest()
+    except:
+        return hashlib.md5(file_path.encode()).hexdigest()
+
+@app.get("/api/thumbnail")
+async def get_thumbnail(
+    path: str = Query(..., description="Full path to the image file"),
+    size: int = Query(300, description="Thumbnail size (max width/height)")
+):
+    """Generate and cache thumbnails for fast grid loading."""
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=400, detail="Not a file")
+
+    # Check if it's an image
+    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.ico'}
+    if os.path.splitext(path)[1].lower() not in image_extensions:
+        raise HTTPException(status_code=400, detail="Not an image file")
+
+    # Generate cache key
+    cache_key = generate_cache_key(path, size)
+    thumbnail_path = os.path.join(THUMBNAIL_CACHE_DIR, f"{cache_key}.jpg")
+
+    # Return cached thumbnail if it exists
+    if os.path.exists(thumbnail_path):
+        return FileResponse(thumbnail_path, media_type="image/jpeg")
+
+    # Generate thumbnail
+    try:
+        with Image.open(path) as img:
+            # Convert RGBA to RGB if necessary
+            if img.mode in ('RGBA', 'LA', 'P'):
+                # Create a white background
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Create thumbnail
+            img.thumbnail((size, size), Image.Resampling.LANCZOS)
+            
+            # Save with optimization
+            img.save(thumbnail_path, "JPEG", quality=85, optimize=True)
+        
+        return FileResponse(thumbnail_path, media_type="image/jpeg")
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate thumbnail: {str(e)}")
+
+@app.delete("/api/thumbnails")
+async def clear_thumbnails():
+    """Clear all cached thumbnails."""
+    try:
+        deleted_count = 0
+        if os.path.exists(THUMBNAIL_CACHE_DIR):
+            for filename in os.listdir(THUMBNAIL_CACHE_DIR):
+                file_path = os.path.join(THUMBNAIL_CACHE_DIR, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    deleted_count += 1
+        return {"status": "success", "deleted": deleted_count, "message": f"Cleared {deleted_count} thumbnails"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear thumbnails: {str(e)}")
+
+@app.get("/api/thumbnail-stats")
+async def get_thumbnail_stats():
+    """Get statistics about the thumbnail cache."""
+    try:
+        count = 0
+        total_size = 0
+        if os.path.exists(THUMBNAIL_CACHE_DIR):
+            for filename in os.listdir(THUMBNAIL_CACHE_DIR):
+                file_path = os.path.join(THUMBNAIL_CACHE_DIR, filename)
+                if os.path.isfile(file_path):
+                    count += 1
+                    total_size += os.path.getsize(file_path)
+        
+        return {
+            "cache_dir": THUMBNAIL_CACHE_DIR,
+            "count": count,
+            "total_size_mb": round(total_size / (1024 * 1024), 2)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
