@@ -34,13 +34,12 @@ class ShortcutConfig(BaseModel):
         "1": "zhengbao",
         "2": "wubao"
     }
-    # Map class name -> hex color
+    # Map class name -> hex color (default: red, green, yellow, blue)
     class_colors: Dict[str, str] = {
-        "1": "#28a745",
-        "2": "#dc3545",
-        "3": "#007bff",
-        "4": "#fd7e14",
-        "5": "#6f42c1"
+        "zhengbao": "#dc3545",  # Red
+        "wubao": "#28a745",     # Green
+        "3": "#ffc107",         # Yellow
+        "4": "#007bff"          # Blue
     }
 
 class AppConfig(BaseModel):
@@ -137,7 +136,10 @@ async def unclassify_image(req: ClassifyRequest):
     return {"status": "success", "detail": "Classification removed"}
 
 @app.get("/api/images")
-async def list_images(path: str = Query(..., description="Directory path to list images from")):
+async def list_images(
+    path: str = Query(..., description="Directory path to list images from"),
+    sort: str = Query("name_desc", description="Sort mode: name_asc, name_desc, date_asc, date_desc")
+):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Directory not found")
     if not os.path.isdir(path):
@@ -152,8 +154,18 @@ async def list_images(path: str = Query(..., description="Directory path to list
     except PermissionError:
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    # Sort descending by filename
-    images.sort(key=lambda x: x.lower(), reverse=True)
+    # Sort based on sort parameter
+    if sort == "name_asc":
+        images.sort(key=lambda x: x.lower())
+    elif sort == "name_desc":
+        images.sort(key=lambda x: x.lower(), reverse=True)
+    elif sort == "date_asc":
+        images.sort(key=lambda x: os.path.getmtime(os.path.join(path, x)))
+    elif sort == "date_desc":
+        images.sort(key=lambda x: os.path.getmtime(os.path.join(path, x)), reverse=True)
+    else:
+        # Default to name descending
+        images.sort(key=lambda x: x.lower(), reverse=True)
     
     # Detect historical classifications by scanning sibling directories
     classifications = {}
@@ -176,7 +188,7 @@ async def list_images(path: str = Query(..., description="Directory path to list
             # If we can't read parent directory, just skip classification detection
             pass
     
-    return {"images": images, "path": path, "classifications": classifications}
+    return {"images": images, "path": path, "classifications": classifications, "sort": sort}
 
 @app.get("/api/image")
 async def get_image(path: str = Query(..., description="Full path to the image file")):

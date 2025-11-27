@@ -102,11 +102,42 @@
         }
 
         #top-bar {
-            padding: 10px;
+            padding: 10px 15px;
             background-color: var(--bar-bg-color);
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            border: 1px solid var(--input-border-color);
+        }
+
+        body.theme-bilibili .toolbar-group,
+        body.theme-wechat .toolbar-group {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .toolbar-group label {
+            font-size: 12px;
+            font-weight: 500;
+            opacity: 0.8;
+            white-space: nowrap;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: var(--border-color);
+            margin: 0 4px;
         }
 
         #path-input {
@@ -348,27 +379,161 @@
             gap: 10px;
             margin-bottom: 5px;
         }
+
+        /* Floating Info Panel */
+        #info-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(40, 40, 40, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 999;
+            transition: all 0.3s ease;
+        }
+
+        body.theme-bilibili #info-panel,
+        body.theme-wechat #info-panel {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        #info-panel h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--button-bg-color);
+            padding-bottom: 8px;
+        }
+
+        .info-section {
+            margin-bottom: 12px;
+        }
+
+        .info-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.7;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .classification-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        body.theme-bilibili .classification-item,
+        body.theme-wechat .classification-item {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .classification-item .name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .classification-item .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .classification-item .shortcut {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        body.theme-bilibili .classification-item .shortcut,
+        body.theme-wechat .classification-item .shortcut {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .classification-item .count {
+            font-weight: 600;
+            color: var(--button-bg-color);
+        }
+
+        .sort-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sort-control label {
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.7;
+        }
+
+        .sort-control select {
+            flex: 1;
+            padding: 6px 8px;
+            background-color: var(--input-bg-color);
+            border: 1px solid var(--input-border-color);
+            color: var(--input-text-color);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
     <div id="top-bar">
-        <input type="text" id="path-input" placeholder="Enter directory path...">
+        <!-- Path Input Group -->
+        <input type="text" id="path-input" placeholder="Enter directory path..." style="flex: 1; min-width: 200px;">
         <button id="load-btn">Load</button>
-        <div id="grid-controls">
-            <label>Size:</label>
-            <input type="range" id="grid-size-slider" min="80" max="1000" value="150">
-            <span id="grid-size-value">150px</span>
+
+        <div class="toolbar-separator"></div>
+
+        <!-- Grid Controls Group -->
+        <div class="toolbar-group">
+            <label>Grid Size:</label>
+            <input type="range" id="grid-size-slider" min="80" max="1000" value="150" style="width: 100px;">
+            <span id="grid-size-value" style="min-width: 45px; font-size: 12px;">150px</span>
         </div>
-        <div id="brightness-controls" style="display: flex; gap: 5px; align-items: center; margin-left: 10px;">
+
+        <!-- Display Options Group -->
+        <div class="toolbar-group">
+            <label>
+                <input type="checkbox" id="use-thumbnails-toggle" style="margin-right: 4px;">
+                Thumbnails
+            </label>
+        </div>
+
+        <!-- Brightness Controls Group -->
+        <div class="toolbar-group">
             <label>Brightness:</label>
-            <input type="range" id="brightness-slider" min="0" max="200" value="100" style="width: 100px;">
-            <span id="brightness-value">100%</span>
-            <button id="reset-brightness-btn" style="padding: 4px 8px; font-size: 12px;">Reset</button>
+            <input type="range" id="brightness-slider" min="0" max="200" value="100" style="width: 80px;">
+            <span id="brightness-value" style="min-width: 40px; font-size: 12px;">100%</span>
+            <button id="reset-brightness-btn" style="padding: 4px 8px; font-size: 11px;">Reset</button>
         </div>
-        <button id="clear-cache-btn" style="background-color: #ff9800; padding: 4px 8px; font-size: 12px;"
-            title="Clear thumbnail cache">🗑️ Clear Cache</button>
-        <button id="settings-btn">Settings</button>
+
+        <div class="toolbar-separator"></div>
+
+        <!-- Action Buttons Group -->
+        <button id="clear-cache-btn" style="background-color: #ff9800; padding: 6px 12px; font-size: 12px;"
+            title="Clear thumbnail cache">🗑️ Cache</button>
+        <button id="settings-btn" style="padding: 6px 12px;">⚙️ Settings</button>
     </div>
 
     <div id="main-container">
@@ -421,6 +586,26 @@
         </div>
     </div>
 
+    <!-- Floating Info Panel -->
+    <div id="info-panel">
+        <h3>📊 Statistics</h3>
+        <div class="info-section">
+            <div class="info-section-title">Classifications</div>
+            <div id="classification-stats"></div>
+        </div>
+        <div class="info-section">
+            <div class="sort-control">
+                <label>Sort:</label>
+                <select id="sort-select">
+                    <option value="name_desc">Name ↓</option>
+                    <option value="name_asc">Name ↑</option>
+                    <option value="date_desc">Date ↓</option>
+                    <option value="date_asc">Date ↑</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
     <script>
         const pathInput = document.getElementById('path-input');
         const loadBtn = document.getElementById('load-btn');
@@ -449,6 +634,8 @@
         let currentPath = '';
         let currentIndex = -1;
         let selectedGridIndex = -1; // Track selected image in grid mode
+        let useThumbnails = false; // Default to original images
+        let currentSortMode = 'name_desc'; // Default sort mode
         let config = {
             shortcuts: {
                 next: 'ArrowDown',
@@ -471,9 +658,18 @@
             gridSizeSlider.value = savedSize;
             updateGridSize(savedSize);
 
-            // Initialize theme
-            const savedTheme = localStorage.getItem('theme') || 'nomacs';
+            // Initialize theme (default: youtube)
+            const savedTheme = localStorage.getItem('theme') || 'youtube';
             applyTheme(savedTheme);
+
+            // Initialize thumbnail toggle from localStorage (default: false = original images)
+            const savedUseThumbnails = localStorage.getItem('useThumbnails');
+            useThumbnails = savedUseThumbnails === 'true';
+            document.getElementById('use-thumbnails-toggle').checked = useThumbnails;
+
+            // Initialize sort mode from localStorage
+            currentSortMode = localStorage.getItem('sortMode') || 'name_desc';
+            document.getElementById('sort-select').value = currentSortMode;
         });
 
         function applyTheme(theme) {
@@ -501,7 +697,7 @@
             if (!path) return;
 
             try {
-                const response = await fetch(`/api/images?path=${encodeURIComponent(path)}`);
+                const response = await fetch(`/api/images?path=${encodeURIComponent(path)}&sort=${currentSortMode}`);
                 if (!response.ok) {
                     const err = await response.json();
                     alert(err.detail || 'Failed to load images');
@@ -513,6 +709,7 @@
                 // Load historical classifications from backend
                 classifications = data.classifications || {};
                 renderGrid();
+                updateClassificationStats();
             } catch (error) {
                 console.error('Error loading images:', error);
                 alert('Error loading images');
@@ -544,16 +741,18 @@
                 container.className = 'thumbnail-container';
 
                 const img = document.createElement('img');
-                // Use thumbnail API instead of full image for grid
-                const thumbnailUrl = `/api/thumbnail?path=${encodeURIComponent(currentPath + '/' + filename)}&size=300`;
+                // Use thumbnail or original image based on user preference
+                const imageUrl = useThumbnails
+                    ? `/api/thumbnail?path=${encodeURIComponent(currentPath + '/' + filename)}&size=300`
+                    : `/api/image?path=${encodeURIComponent(currentPath + '/' + filename)}`;
 
                 // Implement virtual scrolling: only load images near viewport
-                img.dataset.src = thumbnailUrl;
+                img.dataset.src = imageUrl;
                 img.className = 'thumbnail';
 
                 // Load first 30 images immediately, lazy load the rest
                 if (index < 30) {
-                    img.src = thumbnailUrl;
+                    img.src = imageUrl;
                 } else {
                     // Placeholder: transparent 1px gif
                     img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -589,6 +788,8 @@
 
                 gridView.appendChild(container);
             });
+
+            updateClassificationStats();
         }
 
         function selectGridImage(index) {
@@ -858,6 +1059,26 @@
             updateGridSize(e.target.value);
         });
 
+        // Thumbnail toggle
+        document.getElementById('use-thumbnails-toggle').addEventListener('change', (e) => {
+            useThumbnails = e.target.checked;
+            localStorage.setItem('useThumbnails', useThumbnails);
+            // Re-render grid to apply changes
+            renderGrid();
+            // Restore selection if any
+            if (selectedGridIndex !== -1) {
+                selectGridImage(selectedGridIndex);
+            }
+        });
+
+        // Sort mode change
+        document.getElementById('sort-select').addEventListener('change', (e) => {
+            currentSortMode = e.target.value;
+            localStorage.setItem('sortMode', currentSortMode);
+            // Reload images with new sort order
+            loadImages();
+        });
+
         // Brightness controls
         brightnessSlider.addEventListener('input', (e) => {
             updateBrightness(e.target.value);
@@ -1023,6 +1244,49 @@
                     thumbnails[newIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                 }
             }
+        }
+
+        function updateClassificationStats() {
+            const statsContainer = document.getElementById('classification-stats');
+            statsContainer.innerHTML = '';
+
+            // Get all classification classes from config
+            const classes = config.shortcuts.classes || {};
+            const classColors = config.shortcuts.class_colors || {};
+
+            Object.entries(classes).forEach(([key, className]) => {
+                // Count images in this classification
+                const count = Object.values(classifications).filter(c => c === className).length;
+
+                // Get color for this class
+                const color = classColors[className] || '#007bff';
+
+                const item = document.createElement('div');
+                item.className = 'classification-item';
+                item.innerHTML = `
+                    <div class="name">
+                        <span class="color-dot" style="background-color: ${color};"></span>
+                        <span>${className}</span>
+                        <span class="shortcut">${key}</span>
+                    </div>
+                    <span class="count">${count}</span>
+                `;
+                statsContainer.appendChild(item);
+            });
+
+            // Add total count
+            const totalItem = document.createElement('div');
+            totalItem.className = 'classification-item';
+            totalItem.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+            totalItem.style.marginTop = '8px';
+            totalItem.style.paddingTop = '8px';
+            totalItem.innerHTML = `
+                <div class="name">
+                    <strong>Total Images</strong>
+                </div>
+                <span class="count">${currentImages.length}</span>
+            `;
+            statsContainer.appendChild(totalItem);
         }
     </script>
 </body>
