@@ -34,10 +34,10 @@ class ShortcutConfig(BaseModel):
         "1": "zhengbao",
         "2": "wubao"
     }
-    # Map class name -> hex color (default: red, green, yellow, blue)
+    # Map class name -> hex color (default: green, red, yellow, blue)
     class_colors: Dict[str, str] = {
-        "zhengbao": "#dc3545",  # Red
-        "wubao": "#28a745",     # Green
+        "zhengbao": "#28a745",  # Green
+        "wubao": "#dc3545",     # Red
         "3": "#ffc107",         # Yellow
         "4": "#007bff"          # Blue
     }
@@ -88,17 +88,21 @@ async def classify_image(req: ClassifyRequest):
     
     # IMPORTANT: Remove image from ALL other classification folders first
     # This ensures exclusive classification - image can only be in one class at a time
+    # Only check folders that are defined in settings
+    valid_class_names = set(current_config.shortcuts.classes.values())
     if os.path.exists(parent_dir):
         for entry in os.scandir(parent_dir):
             if entry.is_dir() and entry.name != req.class_name and entry.name != os.path.basename(image_dir):
-                # Check if this image exists in this class folder
-                potential_old_path = os.path.join(entry.path, filename)
-                if os.path.exists(potential_old_path):
-                    try:
-                        os.remove(potential_old_path)
-                    except Exception as e:
-                        # Log but don't fail - we still want to proceed with new classification
-                        print(f"Warning: Failed to remove old classification: {e}")
+                # Only operate on folders defined in settings
+                if entry.name in valid_class_names:
+                    # Check if this image exists in this class folder
+                    potential_old_path = os.path.join(entry.path, filename)
+                    if os.path.exists(potential_old_path):
+                        try:
+                            os.remove(potential_old_path)
+                        except Exception as e:
+                            # Log but don't fail - we still want to proceed with new classification
+                            print(f"Warning: Failed to remove old classification: {e}")
     
     if not os.path.exists(target_dir):
         try:
@@ -168,22 +172,25 @@ async def list_images(
         images.sort(key=lambda x: x.lower(), reverse=True)
     
     # Detect historical classifications by scanning sibling directories
+    # Only check folders that are defined in settings
     classifications = {}
     parent_dir = os.path.dirname(path)
+    valid_class_names = set(current_config.shortcuts.classes.values())
     
     if os.path.exists(parent_dir):
         try:
             for entry in os.scandir(parent_dir):
                 # Skip the source directory itself
                 if entry.is_dir() and entry.path != path:
-                    # This could be a classification folder
-                    class_name = entry.name
-                    # Check which images exist in this potential classification folder
-                    for image_filename in images:
-                        classified_image_path = os.path.join(entry.path, image_filename)
-                        if os.path.exists(classified_image_path):
-                            # This image has been classified to this class
-                            classifications[image_filename] = class_name
+                    # Only check folders defined in settings
+                    if entry.name in valid_class_names:
+                        class_name = entry.name
+                        # Check which images exist in this classification folder
+                        for image_filename in images:
+                            classified_image_path = os.path.join(entry.path, image_filename)
+                            if os.path.exists(classified_image_path):
+                                # This image has been classified to this class
+                                classifications[image_filename] = class_name
         except PermissionError:
             # If we can't read parent directory, just skip classification detection
             pass
