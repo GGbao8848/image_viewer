@@ -59,3 +59,11 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
+# macOS .app bundle configuration
+app = BUNDLE(
+    exe,
+    name='ImageViewer.app',
+    icon=None,
+    bundle_identifier='com.songkui.imageviewer',
+)

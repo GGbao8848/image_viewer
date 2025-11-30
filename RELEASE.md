@@ -66,10 +66,44 @@ git push origin --tags
 
 1. 访问 **Releases** 页面
 2. 确认新版本已创建
-3. 检查三个平台的可执行文件是否都已上传：
-   - `image_viewer-windows.exe`
-   - `image_viewer-macos`
-   - `image_viewer-linux`
+3. 检查四个平台的文件是否都已上传：
+   - `image_viewer-windows.exe` (Windows)
+   - `image_viewer-macos` (macOS 命令行版)
+   - `ImageViewer.app.zip` (macOS 应用程序包)
+   - `image_viewer-linux` (Linux)
+
+### 7. 安装说明
+
+#### macOS 用户
+
+**选项 1: 使用应用程序包 (推荐)**
+1. 下载 `ImageViewer.app.zip`
+2. 解压文件
+3. 将 `ImageViewer.app` 拖入 "应用程序" 文件夹
+4. **首次运行**:
+   - 如果遇到 "无法打开，因为无法验证开发者" 的提示
+   - 在 Finder 中找到应用
+   - **右键点击** 应用图标，选择 "打开"
+   - 在弹出的对话框中点击 "打开"
+
+**选项 2: 使用命令行工具**
+1. 下载 `image_viewer-macos`
+2. 打开终端
+3. 赋予执行权限并运行:
+   ```bash
+   chmod +x image_viewer-macos
+   ./image_viewer-macos
+   ```
+
+#### Linux 用户
+
+1. 下载 `image_viewer-linux`
+2. 打开终端
+3. 赋予执行权限并运行:
+   ```bash
+   chmod +x image_viewer-linux
+   ./image_viewer-linux
+   ```
 
 ## 本地测试打包
 

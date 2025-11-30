@@ -42,21 +42,48 @@ jobs:
         run: |
           pyinstaller build.spec
 
-      - name: Rename artifact (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Prepare artifacts (Linux)
+        if: runner.os == 'Linux'
         run: |
+          chmod +x dist/image_viewer
           mv dist/image_viewer dist/${{ matrix.artifact_name }}
 
-      - name: Rename artifact (Windows)
+      - name: Prepare artifacts (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          # Handle the standalone executable
+          chmod +x dist/image_viewer
+          mv dist/image_viewer dist/${{ matrix.artifact_name }}
+          
+          # Handle the .app bundle
+          cd dist
+          zip -r ImageViewer.app.zip ImageViewer.app
+
+      - name: Prepare artifacts (Windows)
         if: runner.os == 'Windows'
         run: |
           move dist\image_viewer.exe dist\${{ matrix.artifact_name }}
 
-      - name: Upload artifact
+      - name: Upload artifact (Linux/Windows)
+        if: runner.os != 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/${{ matrix.artifact_name }}
+
+      - name: Upload artifact (macOS executable)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+      - name: Upload artifact (macOS App Bundle)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImageViewer.app.zip
+          path: dist/ImageViewer.app.zip
 
   release:
     name: Create Release
@@ -90,5 +117,6 @@ jobs:
             artifacts/image_viewer-linux/image_viewer-linux
             artifacts/image_viewer-windows.exe/image_viewer-windows.exe
             artifacts/image_viewer-macos/image_viewer-macos
+            artifacts/ImageViewer.app.zip/ImageViewer.app.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
