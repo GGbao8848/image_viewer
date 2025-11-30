@@ -1,48 +1,94 @@
-name: Build All Platforms
+name: Build and Release
 
 on:
   push:
     tags:
-      - 'v*' # 当推送 v1.0 这种 tag 时触发
+      - 'v*'  # 触发条件：推送以 v 开头的 tag，如 v1.0.0
 
 jobs:
   build:
-    name: Build packages
+    name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
-            TARGET: linux
-            CMD_BUILD: pyinstaller --onefile --name=image_viewer ./backend/main.py
-            OUT_FILE: dist/image_viewer
-          - os: macos-latest
-            TARGET: macos
-            CMD_BUILD: pyinstaller --onefile --name=image_viewer ./backend/main.py
-            OUT_FILE: dist/image_viewer
+            artifact_name: image_viewer-linux
+            asset_name: image_viewer-linux
           - os: windows-latest
-            TARGET: windows
-            CMD_BUILD: pyinstaller --onefile --name=image_viewer.exe ./backend/main.py
-            OUT_FILE: dist/image_viewer.exe
+            artifact_name: image_viewer-windows.exe
+            asset_name: image_viewer-windows.exe
+          - os: macos-latest
+            artifact_name: image_viewer-macos
+            asset_name: image_viewer-macos
 
     steps:
-      - uses: actions/checkout@v4  # 已更新至 v4
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v5 # 已更新至 v5
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          
+          python-version: '3.11'
+
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
-          
+
       - name: Build with PyInstaller
-        run: ${{ matrix.CMD_BUILD }}
-        
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4 # 关键修改：必须使用 v4
+        run: |
+          pyinstaller build.spec
+
+      - name: Rename artifact (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mv dist/image_viewer dist/${{ matrix.artifact_name }}
+
+      - name: Rename artifact (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          move dist\image_viewer.exe dist\${{ matrix.artifact_name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: image_viewer-${{ matrix.TARGET }}
-          path: ${{ matrix.OUT_FILE }}
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/image_viewer-linux/image_viewer-linux
+            artifacts/image_viewer-windows.exe/image_viewer-windows.exe
+            artifacts/image_viewer-macos/image_viewer-macos
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
