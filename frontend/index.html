@@ -1241,7 +1241,7 @@
                 // Scroll to selected image if needed
                 const thumbnails = gridView.querySelectorAll('.thumbnail');
                 if (thumbnails[newIndex]) {
-                    thumbnails[newIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    thumbnails[newIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
                 }
             }
         }
