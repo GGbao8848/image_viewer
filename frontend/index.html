@@ -323,6 +323,20 @@
             color: #aaa;
             font-size: 14px;
             text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        #image-info .info-class-badge {
+            background-color: rgba(0, 123, 255, 0.9);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-block;
         }
 
         /* Settings Modal */
@@ -830,10 +844,15 @@
             singleImage.src = `/api/image?path=${encodeURIComponent(currentPath + '/' + filename)}`;
 
             let info = `${currentIndex + 1} / ${currentImages.length} - ${filename}`;
+
+            // Display classification with colored badge
             if (classifications[filename]) {
-                info += ` [${classifications[filename]}]`;
+                const className = classifications[filename];
+                const color = config.shortcuts.class_colors ? (config.shortcuts.class_colors[className] || '#007bff') : '#007bff';
+                imageInfo.innerHTML = `<span>${info}</span><span class="info-class-badge" style="background-color: ${color};">${className}</span>`;
+            } else {
+                imageInfo.textContent = info;
             }
-            imageInfo.textContent = info;
 
             // Smart preloading: load next and previous images in background
             preloadAdjacentImages(currentIndex);
