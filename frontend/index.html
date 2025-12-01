@@ -872,8 +872,13 @@
 
         function closeSingleView() {
             singleView.style.display = 'none';
+            const lastViewedIndex = currentIndex; // Remember which image was being viewed
             currentIndex = -1;
             renderGrid(); // Re-render to show badges
+            // Restore selection to the last viewed image
+            if (lastViewedIndex !== -1) {
+                selectGridImage(lastViewedIndex);
+            }
         }
 
         function showNext() {
