@@ -409,7 +409,15 @@
             color: var(--text-color);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             z-index: 999;
-            transition: all 0.3s ease;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        #info-panel.hidden {
+            transform: translateX(calc(100% + 20px));
+            opacity: 0;
+            pointer-events: none;
         }
 
         body.theme-bilibili #info-panel,
@@ -1335,6 +1343,65 @@
             `;
             statsContainer.appendChild(totalItem);
         }
+
+        // Auto-hide info panel functionality
+        let infoPanelTimeout;
+        const infoPanel = document.getElementById('info-panel');
+        let isHoveringPanel = false;
+
+        function showInfoPanel() {
+            infoPanel.classList.remove('hidden');
+            // Clear existing timeout
+            if (infoPanelTimeout) {
+                clearTimeout(infoPanelTimeout);
+            }
+        }
+
+        function hideInfoPanelDelayed() {
+            // Clear existing timeout
+            if (infoPanelTimeout) {
+                clearTimeout(infoPanelTimeout);
+            }
+            // Set new timeout to hide after 2 seconds
+            infoPanelTimeout = setTimeout(() => {
+                infoPanel.classList.add('hidden');
+            }, 2000);
+        }
+
+        function hideInfoPanelImmediate() {
+            if (infoPanelTimeout) {
+                clearTimeout(infoPanelTimeout);
+            }
+            infoPanel.classList.add('hidden');
+        }
+
+        // Track when mouse enters/leaves the panel
+        infoPanel.addEventListener('mouseenter', () => {
+            isHoveringPanel = true;
+            showInfoPanel(); // Keep it visible and cancel any hide timers
+        });
+
+        infoPanel.addEventListener('mouseleave', () => {
+            isHoveringPanel = false;
+            hideInfoPanelDelayed(); // Start 2-second countdown to hide
+        });
+
+        // Show panel only when mouse is near the right edge of the screen
+        document.addEventListener('mousemove', (e) => {
+            const rightEdgeThreshold = 50; // pixels from right edge
+            const distanceFromRightEdge = window.innerWidth - e.clientX;
+
+            if (distanceFromRightEdge <= rightEdgeThreshold) {
+                // Mouse is near right edge, show panel
+                showInfoPanel();
+            } else if (!isHoveringPanel && !infoPanel.classList.contains('hidden')) {
+                // Mouse moved away from right edge and not hovering panel, hide with delay
+                hideInfoPanelDelayed();
+            }
+        });
+
+        // Start with panel hidden
+        infoPanel.classList.add('hidden');
     </script>
 </body>
 
