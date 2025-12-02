@@ -534,6 +534,16 @@
             </label>
         </div>
 
+        <!-- Scroll Mode Group -->
+        <div class="toolbar-group">
+            <label>Scroll:</label>
+            <select id="scroll-mode-select"
+                style="padding: 4px 8px; background-color: var(--input-bg-color); border: 1px solid var(--input-border-color); color: var(--input-text-color); border-radius: 4px; font-size: 12px; cursor: pointer;">
+                <option value="smart">Smart</option>
+                <option value="center">Center</option>
+            </select>
+        </div>
+
         <!-- Brightness Controls Group -->
         <div class="toolbar-group">
             <label>Brightness:</label>
@@ -650,6 +660,7 @@
         let selectedGridIndex = -1; // Track selected image in grid mode
         let useThumbnails = false; // Default to original images
         let currentSortMode = 'name_desc'; // Default sort mode
+        let scrollMode = 'smart'; // 'smart' or 'center'
         let config = {
             shortcuts: {
                 next: 'ArrowDown',
@@ -684,6 +695,10 @@
             // Initialize sort mode from localStorage
             currentSortMode = localStorage.getItem('sortMode') || 'name_desc';
             document.getElementById('sort-select').value = currentSortMode;
+
+            // Initialize scroll mode from localStorage
+            scrollMode = localStorage.getItem('scrollMode') || 'smart';
+            document.getElementById('scroll-mode-select').value = scrollMode;
         });
 
         function applyTheme(theme) {
@@ -818,10 +833,16 @@
                     thumb.classList.remove('selected');
                 }
             });
-            // Scroll selected thumbnail into view, centered vertically
+            // Apply scroll mode
             const selectedThumb = thumbnails[index];
             if (selectedThumb) {
-                selectedThumb.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+                if (scrollMode === 'center') {
+                    // Mode 2: Always center the selected item
+                    selectedThumb.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+                } else {
+                    // Mode 1: Smart scroll - only scroll if not fully visible
+                    selectedThumb.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+                }
             }
         }
 
@@ -1103,6 +1124,12 @@
             loadImages();
         });
 
+        // Scroll mode change
+        document.getElementById('scroll-mode-select').addEventListener('change', (e) => {
+            scrollMode = e.target.value;
+            localStorage.setItem('scrollMode', scrollMode);
+        });
+
         // Brightness controls
         brightnessSlider.addEventListener('input', (e) => {
             updateBrightness(e.target.value);
@@ -1262,11 +1289,7 @@
 
             if (newIndex !== selectedGridIndex) {
                 selectGridImage(newIndex);
-                // Scroll to selected image if needed
-                const thumbnails = gridView.querySelectorAll('.thumbnail');
-                if (thumbnails[newIndex]) {
-                    thumbnails[newIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
-                }
+                // Scrolling is now handled by selectGridImage() based on scrollMode
             }
         }
 
