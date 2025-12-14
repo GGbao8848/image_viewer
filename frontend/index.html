@@ -8,6 +8,7 @@
     <style>
         :root {
             --grid-size: 150px;
+            --grid-gap: 10px;
             --brightness: 100%;
 
             /* Default (nomacs) */
@@ -187,7 +188,7 @@
         #grid-view {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(var(--grid-size), 1fr));
-            gap: 10px;
+            gap: var(--grid-gap);
         }
 
         .thumbnail-container {
@@ -534,6 +535,13 @@
             <span id="grid-size-value" style="min-width: 45px; font-size: 12px;">150px</span>
         </div>
 
+        <!-- Grid Gap Group -->
+        <div class="toolbar-group">
+            <label>Gap:</label>
+            <input type="range" id="grid-gap-slider" min="0" max="50" value="10" style="width: 80px;">
+            <span id="grid-gap-value" style="min-width: 35px; font-size: 12px;">10px</span>
+        </div>
+
         <!-- Display Options Group -->
         <div class="toolbar-group">
             <label>
@@ -657,6 +665,8 @@
         const classList = document.getElementById('class-list');
         const gridSizeSlider = document.getElementById('grid-size-slider');
         const gridSizeValue = document.getElementById('grid-size-value');
+        const gridGapSlider = document.getElementById('grid-gap-slider');
+        const gridGapValue = document.getElementById('grid-gap-value');
         const themeSelect = document.getElementById('theme-select');
         const brightnessSlider = document.getElementById('brightness-slider');
         const brightnessValue = document.getElementById('brightness-value');
@@ -690,6 +700,11 @@
             const savedSize = localStorage.getItem('gridSize') || '150';
             gridSizeSlider.value = savedSize;
             updateGridSize(savedSize);
+
+            // Initialize grid gap from localStorage or default
+            const savedGap = localStorage.getItem('gridGap') || '10';
+            gridGapSlider.value = savedGap;
+            updateGridGap(savedGap);
 
             // Initialize theme (default: youtube)
             const savedTheme = localStorage.getItem('theme') || 'youtube';
@@ -858,6 +873,12 @@
             document.documentElement.style.setProperty('--grid-size', size + 'px');
             gridSizeValue.textContent = size + 'px';
             localStorage.setItem('gridSize', size);
+        }
+
+        function updateGridGap(size) {
+            document.documentElement.style.setProperty('--grid-gap', size + 'px');
+            gridGapValue.textContent = size + 'px';
+            localStorage.setItem('gridGap', size);
         }
 
         function openSingleView(index) {
@@ -1110,6 +1131,11 @@
         // Grid size slider
         gridSizeSlider.addEventListener('input', (e) => {
             updateGridSize(e.target.value);
+        });
+
+        // Grid gap slider
+        gridGapSlider.addEventListener('input', (e) => {
+            updateGridGap(e.target.value);
         });
 
         // Thumbnail toggle
